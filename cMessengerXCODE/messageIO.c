@@ -9,8 +9,10 @@
 #define MSGLINE "message >"
 
 /* GLOBAL DEFINITION */
-/* Initialise a system action separator */
+/* Define a system action separator */
 const char* SYSTEMACTION = "--------------------";
+/* Define what message format string should be like */
+const int COLORFORMATFLAG = 0;
 /**/
 
 /*FUNCTIONS*/
@@ -21,7 +23,7 @@ char* ProcessMessage(int size, int isInChat)
 {
     /* Declaration */
     /* Scale the size, so even it is small, the program will be able to process a system call */
-#define MINSYSCALLSIZE 2
+    #define MINSYSCALLSIZE 2
     
     char* messageStr;
     int i;
@@ -31,7 +33,7 @@ char* ProcessMessage(int size, int isInChat)
     if (size < MINSYSCALLSIZE)
         size = MINSYSCALLSIZE;
     
-    messageStr = (char*)malloc(size* sizeof(char));
+    messageStr = (char*)malloc(size * sizeof(char));
     
     /* Print standard system action UI */
     {
@@ -118,6 +120,7 @@ char* ProcessMessage(int size, int isInChat)
 void PrintMessage(USER* user, char* messageStr, int woName)
 {
     int isRight = 0, indentation = 1;
+    /**/
     
     /* If user is current user, make right-indentation */
     if (user == CUSER)
@@ -153,7 +156,11 @@ void PrintMessage(USER* user, char* messageStr, int woName)
     }
     
     /* Print the message */
-    printf("\x1b[97;%dm %s \x1b[0m\n", user->userColor, messageStr);
+    /* Determine what a message format string should be */
+    if (1 == COLORFORMATFLAG)
+        printf("\x1b[97;%dm %s \x1b[0m\n", user->userColor, messageStr);
+    else
+        printf(" %s \n", messageStr);
 }
 
 /* Print a passed profile's information */

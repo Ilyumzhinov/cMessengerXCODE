@@ -44,6 +44,8 @@ extern USER* const CUSER;
 extern MESSAGEHISTORY* MESSAGEHIST;
 /* Standard encapsulation of a system action. Defined at messageIO.c */
 extern const char* SYSTEMACTION;
+/* Determine what message format string should be like. Defined at messageIO.c */
+extern const int COLORFORMATFLAG;
 /**/
 
 /* FUNCTIONS PROTOTYPES */
