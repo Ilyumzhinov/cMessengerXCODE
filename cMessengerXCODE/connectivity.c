@@ -15,6 +15,8 @@ char buffer[MAXSIZE];
 
 int SendMsg(int);
 int ReceiveMsg(int);
+
+USER* connectionUser = &(USER){ .userName = "connectionUser", .userColor = 46 };
 /**/
 
 /*FUNCTIONS*/
@@ -91,31 +93,34 @@ int CreateServer()
             AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
         }
         
-        /* Allow multiple send/receives */
-        while(1)
+        /* COMMUNICATING */
         {
-            /* Receive a message */
-            if (-1 == ReceiveMsg(clientSocket))
-                break;
+            /* Allow multiple send/receives */
+            while(1)
+            {
+                /* Receive a message */
+                if (-1 == ReceiveMsg(clientSocket))
+                    break;
+                
+                /* Send a message */
+                if (-1 == SendMsg(clientSocket))
+                    break;
+            }
             
-            /* Send a message */
-            if (-1 == SendMsg(clientSocket))
-                break;
+            /* CLOSE: Close connection, free port used */
+            close(clientSocket);
             
-            AddMessage(SYSTEMUSER, buffer, 0);
+            AddMessage(SYSTEMUSER, "Connection closed!", 0);
         }
-        
-        /* CLOSE: Close connection, free port used */
-        close(clientSocket);
-        
-        AddMessage(SYSTEMUSER, "Connection closed!", 0);
     }
+    
     return 0;
 }
 
 /* Create a client by connecting to a listening socket at a specified IP address */
-/* Source code: https://www.geeksforgeeks.org/socket-programming-cc/
- https://codereview.stackexchange.com/questions/13461/two-way-communication-in-tcp-server-client-implementation?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
+/* Source code:
+ https://www.geeksforgeeks.org/socket-programming-cc/
+ https://codereview.stackexchange.com/questions/13461/two-way-communication-in-tcp-server-client-implementationutm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa
  http://www.csd.uoc.gr/~hy556/material/tutorials/cs556-3rd-tutorial.pdf */
 int CreateClient()
 {
@@ -128,100 +133,102 @@ int CreateClient()
     int mem = 0;
     /**/
     
-    /* SOCKET: Create an active TCP socket */
-    if (-1 == (clientSocket = socket(AF_INET, SOCK_STREAM, 0)))
+    /* MAKING A CONNECTION */
     {
-        AddMessage(SYSTEMUSER, "Socket creation error!", 0);
-        return -1;
-    }
-    
-    serverAddress.sin_family = AF_INET; /* Internet address family */
-    serverAddress.sin_port = htons(PORT); /* Server port */
-    
-    /* Receive a server IP address from a user.
-     Convert IPv4 and IPv6 addresses from text to binary form */
-    while (0 >= inet_pton(AF_INET, ipServer, &serverAddress.sin_addr))
-    {
-        /* Receive an IP address from the user */
-        if (0 == mem++)
-            AddMessage(SYSTEMUSER, "Enter IP", 0);
-        
+        /* SOCKET: Create an active TCP socket */
+        if (-1 == (clientSocket = socket(AF_INET, SOCK_STREAM, 0)))
         {
-            printf("%s\n", SYSTEMACTION);
-            PrintMessage(SYSTEMUSER, "Type 'x' to connect to localhost (127.0.0.1)", 1);
-            strncpy(ipServer, ProcessMessage(64, 0), 64);
+            AddMessage(SYSTEMUSER, "Socket creation error!", 0);
+            return -1;
+        }
+        
+        serverAddress.sin_family = AF_INET; /* Internet address family */
+        serverAddress.sin_port = htons(PORT); /* Server port */
+        
+        /* Receive a server IP address from a user.
+         Convert IPv4 and IPv6 addresses from text to binary form */
+        while (0 >= inet_pton(AF_INET, ipServer, &serverAddress.sin_addr))
+        {
+            /* Receive an IP address from the user */
+            if (0 == mem++)
+                AddMessage(SYSTEMUSER, "Enter IP", 0);
             
-            if ('x' == ipServer[0])
-                strncpy(ipServer, "127.0.0.1", 64);
+            {
+                printf("%s\n", SYSTEMACTION);
+                PrintMessage(SYSTEMUSER, "Type 'x' to connect to localhost (127.0.0.1)", 1);
+                strncpy(ipServer, ProcessMessage(64, 0), 64);
+                
+                if ('x' == ipServer[0])
+                    strncpy(ipServer, "127.0.0.1", 64);
+            }
+            
+            AddMessage(CUSER, ipServer, 0);
+            
+            if(0 >= inet_pton(AF_INET, ipServer, &serverAddress.sin_addr))
+            {
+                PrintMessage(SYSTEMUSER, "Invalid address", 0);
+            }
+            printf("%s\n", SYSTEMACTION);
         }
         
-        AddMessage(CUSER, ipServer, 0);
-        
-        if(0 >= inet_pton(AF_INET, ipServer, &serverAddress.sin_addr))
+        /* CONNECT: Establish a connection with the server.
+         clientSocket - socket to be used in connection,
+         serverAddress - address of the server,
+         size - size of sockaddr_in structure */
+        if (-1 == connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)))
         {
-            PrintMessage(SYSTEMUSER, "Invalid address", 0);
+            AddMessage(SYSTEMUSER, "Connection failed", 0);
+            close(clientSocket);
+            return -1;
         }
-        printf("%s\n", SYSTEMACTION);
+        
+        /* Send and receive user information */
+        /*{
+         char userInfo[20];
+         char* tempColor = (char*)malloc(sizeof(char[1]));
+         
+         strncpy(userInfo, CUSER->userName, 20);
+         sprintf(tempColor, "%d", (CUSER->userColor - 40));
+         
+         userInfo[17] = *tempColor;
+         
+         
+         send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
+         
+         if (0 > (num = recv(clientSocket, buffer, MAXSIZE, 0)))
+         {
+         perror("recv");
+         return -1;
+         }
+         else if (0 == num)
+         {
+         AddMessage(SYSTEMUSER, "Connection closed", 0);
+         
+         return -1;
+         }
+         
+         PrintMessage(CUSER, buffer, 0);
+         }*/
     }
     
-    /* CONNECT: Establish a connection with the server.
-     clientSocket - socket to be used in connection,
-     serverAddress - address of the server,
-     size - size of sockaddr_in structure */
-    if (-1 == connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)))
-    {
-        AddMessage(SYSTEMUSER, "Connection failed", 0);
-        close(clientSocket);
-        return -1;
-    }
-    
-    /* Send and receive user information */
-    /*{
-     char userInfo[20];
-     char* tempColor = (char*)malloc(sizeof(char[1]));
-     
-     strncpy(userInfo, CUSER->userName, 20);
-     sprintf(tempColor, "%d", (CUSER->userColor - 40));
-     
-     userInfo[17] = *tempColor;
-     
-     
-     send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
-     
-     if (0 > (num = recv(clientSocket, buffer, MAXSIZE, 0)))
-     {
-     perror("recv");
-     return -1;
-     }
-     else if (0 == num)
-     {
-     AddMessage(SYSTEMUSER, "Connection closed", 0);
-     
-     return -1;
-     }
-     
-     PrintMessage(CUSER, buffer, 0);
-     }*/
-    
+    /* COMMUNICATING */
     {
         AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
-    }
-    
-    /* Allow to send/receive multiple times */
-    while (1)
-    {
-        /* Send a message */
-        if (-1 == SendMsg(clientSocket))
-            break;
         
-        /* Receive a message */
-        if (-1 == ReceiveMsg(clientSocket))
-            break;
+        /* Allow to send/receive multiple times */
+        while (1)
+        {
+            /* Send a message */
+            if (-1 == SendMsg(clientSocket))
+                break;
+            
+            /* Receive a message */
+            if (-1 == ReceiveMsg(clientSocket))
+                break;
+        }
         
-        AddMessage(SYSTEMUSER, buffer, 0);
+        close(clientSocket);
     }
-    
-    close(clientSocket);
     
     return 0;
 }
@@ -250,7 +257,6 @@ int SendMsg(int xSocket)
 int ReceiveMsg(int xSocket)
 {
     long int msgSize = -1;
-    USER* connectionUser = &(USER){ .userName = "connectionUser", .userColor = 46 };
     
     if (-1 == (msgSize = recv(xSocket, buffer, MAXSIZE, 0)))
     {

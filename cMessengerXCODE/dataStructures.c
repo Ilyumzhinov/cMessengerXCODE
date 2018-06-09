@@ -65,7 +65,9 @@ void AddMessage(USER* userPtr, char* messageStr, int indentation)
         tempMessage = (struct Message*)malloc(sizeof(struct Message));
         tempMessage->sender = userPtr;
         
-        tempMessage->message = messageStr;
+        /* Save a message into a data structure up to max allowed size */
+        strncpy(tempMessage->message, messageStr, MESSAGEMAXSIZE);
+        
         tempMessage->indentation = indentation;
         
         tempMessage->next = NULL;

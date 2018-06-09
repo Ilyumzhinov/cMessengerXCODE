@@ -1,5 +1,6 @@
 /* GLOBAL SYMBOLIC CONSTANTS */
 #define USERNAMESIZE 16
+#define MESSAGEMAXSIZE 240
 
 /* STRUCTURES DEFINITIONS */
 /* Structure that is used to store data about a user:
@@ -21,7 +22,7 @@ struct Message
 {
     USER* sender;
     
-    char* message;
+    char message[MESSAGEMAXSIZE];
     int indentation;
     
     struct Message* next;
