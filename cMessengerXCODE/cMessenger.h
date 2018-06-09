@@ -1,5 +1,8 @@
 /* GLOBAL SYMBOLIC CONSTANTS */
 #define USERNAMESIZE 16
+/* Scale the size, so even it is small, the program will be able to process a system call */
+#define MESSAGEMINSIZE 2
+/* Scale the message size, so it will be restricted to whatever max size specified */
 #define MESSAGEMAXSIZE 240
 
 /* STRUCTURES DEFINITIONS */
@@ -36,50 +39,42 @@ struct MessageHistory
 /**/
 
 /* GLOBAL DECLARATION */
-/* System user (cMessenger). Defined at cMessenger.c */
+/* System user (cMessenger). */
 extern USER* SYSTEMUSER;
-/* Current User. Defined at cMessenger.c
+/* Current User.
  The pointer cannot be changed, but the values pointed to can be */
 extern USER* const CUSER;
-/* Message thread of the session. Defined at cMessenger.c */
+/* Message thread of the session. */
 extern MESSAGEHISTORY* MESSAGEHIST;
-/* Standard encapsulation of a system action. Defined at messageIO.c */
+/* Standard encapsulation of a system action. */
 extern const char* SYSTEMACTION;
-/* Determine what message format string should be like. Defined at messageIO.c */
+/* Determine what message format string should be like. */
 extern const int COLORFORMATFLAG;
 /**/
 
 /* FUNCTIONS PROTOTYPES */
-/* Create a user structure
- defined at dataStructures.c */
+/* Create a user structure */
 void CreateUser(void);
 
-/* Add a new node to the dynamic structure
- defined at dataStructures.c */
+/* Add a new node to the dynamic structure */
 void AddMessage(USER*, char*, int);
 
-/* Create a listening host using a socket
- defined at connection.c */
+/* Create a listening host using a socket */
 int CreateServer(void);
 
-/* Create a client by connecting to a listening socket at a specified IP address
- defined at connection.c */
+/* Create a client by connecting to a listening socket at a specified IP address */
 int CreateClient(void);
 
 /* A universal string processing method that includes systems calls.
  Allocates memory for a string with the size specified.
- By default, returns the pointer to the string.
- defined at printMessages.c */
+ By default, returns the pointer to the string. */
 char* ProcessMessage(int, int);
 
-/* Print a message
- defined at printMessages.c */
+/* Print a message*/
 void PrintMessage(USER*, char*, int);
 
-/* Print a passed profile's information
- defined at printMessages.c */
+/* Print a passed profile's information */
 void PrintProfile(USER*);
 
-/* Traverse the dynamic strucre of messages
- defined at printMessages.c */
+/* Traverse the dynamic strucre of messages */
 void PrintHistory(MESSAGE*);

@@ -17,21 +17,28 @@ const int COLORFORMATFLAG = 0;
 
 /*FUNCTIONS*/
 /* A universal string processing method that includes systems calls.
- Allocates memory for a string with the size specified (then scaled to system calls requirement).
+ Allocates memory for a string with the size specified (scaled to system calls requirement).
  By default, returns the pointer to the string. */
 char* ProcessMessage(int size, int isInChat)
 {
     /* Declaration */
-    /* Scale the size, so even it is small, the program will be able to process a system call */
-    #define MINSYSCALLSIZE 2
-    
     char* messageStr;
     int i;
     /**/
     
     /* Scale the size if necessary */
-    if (size < MINSYSCALLSIZE)
-        size = MINSYSCALLSIZE;
+    {
+        if (size < MESSAGEMINSIZE)
+        {
+            size = MESSAGEMINSIZE;
+            /* perror("message size was increased due to min size requirement"); */
+        }
+        else if (size > MESSAGEMAXSIZE)
+        {
+            size = MESSAGEMAXSIZE;
+            /* perror("message size was decreased due to max size requirement"); */
+        }
+    }
     
     messageStr = (char*)malloc(size * sizeof(char));
     

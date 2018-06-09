@@ -11,7 +11,7 @@
 /* Max participants waiting for a connection */
 #define MAXPENDING 1
 
-char buffer[MAXSIZE];
+char msgBuffer[MAXSIZE];
 
 int SendMsg(int);
 int ReceiveMsg(int);
@@ -195,7 +195,7 @@ int CreateClient()
          
          send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
          
-         if (0 > (num = recv(clientSocket, buffer, MAXSIZE, 0)))
+         if (0 > (num = recv(clientSocket, msgBuffer, MAXSIZE, 0)))
          {
          perror("recv");
          return -1;
@@ -207,7 +207,7 @@ int CreateClient()
          return -1;
          }
          
-         PrintMessage(CUSER, buffer, 0);
+         PrintMessage(CUSER, msgBuffer, 0);
          }*/
     }
     
@@ -233,18 +233,46 @@ int CreateClient()
     return 0;
 }
 
+int SendConnectionUserInfo(int xSocket, USER* sender)
+{
+    char userInfo[20];
+    char* tempColor = (char*)malloc(sizeof(char[1]));
+    
+    strncpy(userInfo, CUSER->userName, 20);
+    sprintf(tempColor, "%d", (CUSER->userColor - 40));
+    
+    userInfo[17] = *tempColor;
+    
+    
+    /*send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
+    
+    if (0 > (num = recv(clientSocket, msgBuffer, MAXSIZE, 0)))
+    {
+        perror("recv");
+        return -1;
+    }
+    else if (0 == num)
+    {
+        AddMessage(SYSTEMUSER, "Connection closed", 0);
+        
+        return -1;
+    }*/
+    
+    return 0;
+}
+
 int SendMsg(int xSocket)
 {
     /* Input and save a message */
-    strncpy(buffer, ProcessMessage(MAXSIZE, 1), MAXSIZE);
+    strncpy(msgBuffer, ProcessMessage(MAXSIZE, 1), MAXSIZE);
     /* Display it in the message history */
-    AddMessage(CUSER, buffer, 0);
+    AddMessage(CUSER, msgBuffer, 0);
     
     /* SEND: Send data (blocking).
-     buffer - message to send,
+     msgBuffer - message to send,
      SENDBUFFERSIZE - size of the message,
      0 - no flags */
-    if (MAXSIZE != (send(xSocket, buffer, MAXSIZE, 0)))
+    if (MAXSIZE != (send(xSocket, msgBuffer, MAXSIZE, 0)))
     {
         AddMessage(SYSTEMUSER, "Failure Sending Message", 0);
         
@@ -258,7 +286,7 @@ int ReceiveMsg(int xSocket)
 {
     long int msgSize = -1;
     
-    if (-1 == (msgSize = recv(xSocket, buffer, MAXSIZE, 0)))
+    if (-1 == (msgSize = recv(xSocket, msgBuffer, MAXSIZE, 0)))
     {
         AddMessage(SYSTEMUSER, "Connection Closed", 0);
         
@@ -266,7 +294,7 @@ int ReceiveMsg(int xSocket)
     }
     
     /* Display a received message */
-    AddMessage(connectionUser, buffer, 0);
+    AddMessage(connectionUser, msgBuffer, 0);
     /**/
     
     return (int)msgSize;
