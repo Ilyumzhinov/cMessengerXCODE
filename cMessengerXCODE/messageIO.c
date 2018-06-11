@@ -12,7 +12,7 @@
 /* Define a system action separator */
 const char* SYSTEMACTION = "--------------------";
 /* Define what message format string should be like */
-const int DISPLAYCOLORFLAG = 1;
+const int DISPLAYCOLORFLAG = 0;
 /**/
 
 /*FUNCTIONS*/

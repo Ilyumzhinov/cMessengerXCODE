@@ -13,6 +13,8 @@
 
 char msgBuffer[MAXSIZE];
 
+void ExchangeMsgs(int xSocket, int sendFirst);
+
 USER* connectionUser = &(USER){ .userName = "\0", .userColor = 0 };
 /**/
 
@@ -88,9 +90,7 @@ int CreateServer()
         
         /* COMMUNICATING */
         {
-            int connectionStatus;
-            
-            AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
+            int connectionStatus = 0;
             
             /* Receive client user info */
             connectionStatus = ReceiveUserInfo(clientSocket, connectionUser, 1);
@@ -100,24 +100,9 @@ int CreateServer()
                 connectionStatus = SendUserInfo(clientSocket, CUSER, 1);
                 if (1 == connectionStatus)
                 {
-                    /* Allow multiple send/receives */
-                    while(1)
-                    {
-                        /* Receive a message */
-                        if (-1 == ReceiveAndDisplayMsg(clientSocket))
-                            break;
-                        
-                        /* Send a message */
-                        if (-1 == SendAndDisplayMsg(clientSocket))
-                            break;
-                    }
+                    ExchangeMsgs(clientSocket, 0);
                 }
             }
-            
-            /* CLOSE: Close connection, free port used */
-            close(clientSocket);
-            
-            AddMessage(SYSTEMUSER, "Connection closed!", 0);
         }
     }
     
@@ -192,9 +177,7 @@ int CreateClient()
     
     /* COMMUNICATING */
     {
-        int connectionStatus;
-        
-        AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
+        int connectionStatus = 0;
         
         /* Send current user info */
         connectionStatus = SendUserInfo(clientSocket, CUSER, 1);
@@ -204,27 +187,49 @@ int CreateClient()
             connectionStatus = ReceiveUserInfo(clientSocket, connectionUser, 1);
             if (1 == connectionStatus)
             {
-                /* Allow to send/receive multiple times */
-                while (1)
-                {
-                    /* Send a message */
-                    if (-1 == SendAndDisplayMsg(clientSocket))
-                        break;
-                    
-                    /* Receive a message */
-                    if (-1 == ReceiveAndDisplayMsg(clientSocket))
-                        break;
-                }
+                ExchangeMsgs(clientSocket, 1);
             }
         }
-        
-        /* CLOSE: Close connection, free port used */
-        close(clientSocket);
-        
-        AddMessage(SYSTEMUSER, "Connection closed!", 0);
     }
     
     return 0;
+}
+
+/* COMMUNICATING */
+void ExchangeMsgs(int xSocket, int sendFirst)
+{
+    int connectionStatus = 1;
+   
+    AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
+    
+    /* Send a message first */
+    if (sendFirst)
+    {
+        if (-1 == SendAndDisplayMsg(xSocket))
+        {
+            connectionStatus = -1;
+        }
+    }
+    
+    /* Allow multiple send/receives */
+    if (1 == connectionStatus)
+    {
+        while(1)
+        {
+            /* Receive a message */
+            if (-1 == ReceiveAndDisplayMsg(xSocket))
+                break;
+            
+            /* Send a message */
+            if (-1 == SendAndDisplayMsg(xSocket))
+                break;
+        }
+    }
+    
+    /* CLOSE: Close connection, free port used */
+    close(xSocket);
+    
+    AddMessage(SYSTEMUSER, "Connection closed!", 0);
 }
 
 /* Send user info to a socket and validate if it was received */
@@ -252,7 +257,7 @@ int SendUserInfo(int xSocket, USER* sender, int validate)
         /* Receive the user info obtained that the other side */
         ReceiveUserInfo(xSocket, validateUser, 0);
         
-        if (!strncmp(sender->userName, validateUser->userName, USERNAMESIZE))
+        if (strncmp(sender->userName, validateUser->userName, USERNAMESIZE))
             return 0;
         else if (sender->userColor != validateUser->userColor)
             return 0;
@@ -264,8 +269,8 @@ int SendUserInfo(int xSocket, USER* sender, int validate)
 /* Receive user info to a socket and validate if it was received correctly */
 int ReceiveUserInfo(int xSocket, USER* sender, int validate)
 {
-    char senderUsername[USERNAMESIZE];
-    char senderColor[2];
+    char senderUsername[USERNAMESIZE] = "\0";
+    char senderColor[2] = "\0";
     
     /* Receive username */
     if (-1 == recv(xSocket, senderUsername, USERNAMESIZE, 0))
