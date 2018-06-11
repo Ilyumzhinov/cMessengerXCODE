@@ -26,12 +26,12 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		AC2827D220C74D2200CB1E77 /* cMessengerXCODE */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = cMessengerXCODE; path = /Users/artem/Downloads/cMessengerXCODE/build/Debug/cMessengerXCODE; sourceTree = "<absolute>"; };
 		AC2827DC20C74D6400CB1E77 /* dataStructures.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = dataStructures.c; sourceTree = "<group>"; };
 		AC2827DD20C74D6400CB1E77 /* messageIO.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = messageIO.c; sourceTree = "<group>"; };
 		AC2827DE20C74D6400CB1E77 /* cMessenger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = cMessenger.h; sourceTree = "<group>"; };
 		AC2827DF20C74D6400CB1E77 /* cMessenger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = cMessenger.c; sourceTree = "<group>"; };
 		AC2827E020C74D6400CB1E77 /* connectivity.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = connectivity.c; sourceTree = "<group>"; };
+		AC3363AF20CE38D8004075CE /* cMessengerXCODE */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cMessengerXCODE; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -49,6 +49,7 @@
 			isa = PBXGroup;
 			children = (
 				AC2827D420C74D2200CB1E77 /* cMessengerXCODE */,
+				AC3363AF20CE38D8004075CE /* cMessengerXCODE */,
 			);
 			sourceTree = "<group>";
 		};
@@ -81,7 +82,7 @@
 			);
 			name = cMessengerXCODE;
 			productName = cMessengerXCODE;
-			productReference = AC2827D220C74D2200CB1E77 /* cMessengerXCODE */;
+			productReference = AC3363AF20CE38D8004075CE /* cMessengerXCODE */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */

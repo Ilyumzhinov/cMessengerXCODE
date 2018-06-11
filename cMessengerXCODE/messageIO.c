@@ -12,7 +12,7 @@
 /* Define a system action separator */
 const char* SYSTEMACTION = "--------------------";
 /* Define what message format string should be like */
-const int COLORFORMATFLAG = 0;
+const int DISPLAYCOLORFLAG = 1;
 /**/
 
 /*FUNCTIONS*/
@@ -164,7 +164,7 @@ void PrintMessage(USER* user, char* messageStr, int woName)
     
     /* Print the message */
     /* Determine what a message format string should be */
-    if (1 == COLORFORMATFLAG)
+    if (1 == DISPLAYCOLORFLAG)
         printf("\x1b[97;%dm %s \x1b[0m\n", user->userColor, messageStr);
     else
         printf(" %s \n", messageStr);

@@ -49,12 +49,17 @@ extern MESSAGEHISTORY* MESSAGEHIST;
 /* Standard encapsulation of a system action. */
 extern const char* SYSTEMACTION;
 /* Determine what message format string should be like. */
-extern const int COLORFORMATFLAG;
+extern const int DISPLAYCOLORFLAG;
 /**/
 
 /* FUNCTIONS PROTOTYPES */
 /* Create a user structure */
 void CreateUser(void);
+
+/* Change a user structure.
+ Pass a strPtr that will modify the existing values saved in userPtr.
+ Pass mode=1 to modify user name or pass mode=2 to modify user color (must be scaled). */
+void ChangeUser(USER* userPtr, char* strPtr, int mode);
 
 /* Add a new node to the dynamic structure */
 void AddMessage(USER*, char*, int);
@@ -64,6 +69,36 @@ int CreateServer(void);
 
 /* Create a client by connecting to a listening socket at a specified IP address */
 int CreateClient(void);
+
+/* Send user info to a socket and validate if it was received.
+ validate=0 sends user info once.
+ validate=1 sends user info and waits to receive the data from the other side for comparison. Requires ReceiveUserInfo() to also be set to validate=1 in order to receive all packages.
+ Return -1 if username does not match,
+ -2 if userColor does not match,
+ 0 if validate user data structure does not match,
+ 1 if everything was successful.
+  */
+int SendUserInfo(int xSocket, USER* sender, int validate);
+
+/* Receive user info to a socket and validate if it was received correctly.
+ validate=0 receives user info without validation.
+ validate=1 recevies user info and sends it back to receive the confirmation for a match. Requires SendUserInfo() to also be set to validate=1 in order to receive the reply.
+ Return -1 if username does not match,
+ -2 if userColor does not match,
+ 0 if validate user data structure does not match,
+ 1 if everything was successful.
+ */
+int ReceiveUserInfo(int xSocket, USER* sender, int validate);
+
+/* Send a message to a socket and display it.
+ Returns -1 if there was a failure sending message,
+ 0 if okey */
+int SendAndDisplayMsg(int xSocket);
+
+/* Receive a message to a socket and display it.
+ Returns -1 if there was a failure receiving message,
+ 0 if okey */
+int ReceiveAndDisplayMsg(int xSocket);
 
 /* A universal string processing method that includes systems calls.
  Allocates memory for a string with the size specified.

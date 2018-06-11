@@ -5,6 +5,31 @@
 #include <string.h> /* for strcopy() */
 
 /*FUNCTIONS*/
+/* Change a user structure.
+ Pass a strPtr that will modify the existing values saved in userPtr.
+ Pass mode=1 to modify user name or pass mode=2 to modify user color (must be scaled). */
+void ChangeUser(USER* userPtr, char* strPtr, int mode)
+{
+    /* Validity checks */
+    if (!userPtr)
+        return;
+    if (!strPtr)
+        return;
+    
+    /* Save string pointer into User->name data structure */
+    if (1 == mode)
+    {
+        strncpy(userPtr->userName, strPtr, USERNAMESIZE);
+    }
+    /* Save string pointer into User->color data structure */
+    else if (2 == mode)
+    {
+        userPtr->userColor = atoi(strPtr);
+    }
+    
+    return;
+}
+
 /* A complete procedure that lets a user to create a USER structure and returns it */
 void CreateUser()
 {
@@ -14,9 +39,13 @@ void CreateUser()
     
     /* Create name */
     {
+        char usrNameInput[USERNAMESIZE];
+        
         AddMessage(SYSTEMUSER, "Type in your nickname", 1);
         
-        strncpy(CUSER->userName, ProcessMessage(USERNAMESIZE, 0), USERNAMESIZE);
+        /* Receive a name as a user input and save it in the data structure */
+        strncpy(usrNameInput, ProcessMessage(USERNAMESIZE, 0), USERNAMESIZE);
+        ChangeUser(CUSER, usrNameInput, 1);
         
         AddMessage(CUSER, CUSER->userName, 0);
     }
@@ -24,7 +53,7 @@ void CreateUser()
     /* Choose color */
     {
         int i;
-        char* tempColor = (char*)malloc(sizeof(char[64]));
+        char* tempColor = (char*)malloc(sizeof(char[2]));
         
         /* Print various colors */
         AddMessage(SYSTEMUSER, "Choose color", 0);
@@ -43,10 +72,12 @@ void CreateUser()
             strncpy(userColorInput, ProcessMessage(1, 0), 1);
         }
         
-        CUSER->userColor = atoi(userColorInput) + 40;
+        sprintf(tempColor, "%d", (atoi(userColorInput) + 40));
+        
+        ChangeUser(CUSER, tempColor, 2);
         
         /* Reference: http://forums.codeguru.com/showthread.php?347081-itoa-error */
-        sprintf(tempColor, "%d", CUSER->userColor - 40);
+        sprintf(tempColor, "%d", (CUSER->userColor - 40));
         
         AddMessage(CUSER, tempColor, 0);
     }

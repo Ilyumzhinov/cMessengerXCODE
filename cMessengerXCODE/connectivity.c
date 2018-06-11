@@ -13,10 +13,7 @@
 
 char msgBuffer[MAXSIZE];
 
-int SendMsg(int);
-int ReceiveMsg(int);
-
-USER* connectionUser = &(USER){ .userName = "connectionUser", .userColor = 46 };
+USER* connectionUser = &(USER){ .userName = "\0", .userColor = 0 };
 /**/
 
 /*FUNCTIONS*/
@@ -89,22 +86,32 @@ int CreateServer()
             return -1;
         }
         
-        {
-            AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
-        }
-        
         /* COMMUNICATING */
         {
-            /* Allow multiple send/receives */
-            while(1)
+            int connectionStatus;
+            
+            AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
+            
+            /* Receive client user info */
+            connectionStatus = ReceiveUserInfo(clientSocket, connectionUser, 1);
+            if (1 == connectionStatus)
             {
-                /* Receive a message */
-                if (-1 == ReceiveMsg(clientSocket))
-                    break;
-                
-                /* Send a message */
-                if (-1 == SendMsg(clientSocket))
-                    break;
+                /* Send current user info */
+                connectionStatus = SendUserInfo(clientSocket, CUSER, 1);
+                if (1 == connectionStatus)
+                {
+                    /* Allow multiple send/receives */
+                    while(1)
+                    {
+                        /* Receive a message */
+                        if (-1 == ReceiveAndDisplayMsg(clientSocket))
+                            break;
+                        
+                        /* Send a message */
+                        if (-1 == SendAndDisplayMsg(clientSocket))
+                            break;
+                    }
+                }
             }
             
             /* CLOSE: Close connection, free port used */
@@ -181,87 +188,110 @@ int CreateClient()
             close(clientSocket);
             return -1;
         }
-        
-        /* Send and receive user information */
-        /*{
-         char userInfo[20];
-         char* tempColor = (char*)malloc(sizeof(char[1]));
-         
-         strncpy(userInfo, CUSER->userName, 20);
-         sprintf(tempColor, "%d", (CUSER->userColor - 40));
-         
-         userInfo[17] = *tempColor;
-         
-         
-         send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
-         
-         if (0 > (num = recv(clientSocket, msgBuffer, MAXSIZE, 0)))
-         {
-         perror("recv");
-         return -1;
-         }
-         else if (0 == num)
-         {
-         AddMessage(SYSTEMUSER, "Connection closed", 0);
-         
-         return -1;
-         }
-         
-         PrintMessage(CUSER, msgBuffer, 0);
-         }*/
     }
     
     /* COMMUNICATING */
     {
+        int connectionStatus;
+        
         AddMessage(SYSTEMUSER, "Connection established! Say hello;)", 0);
         
-        /* Allow to send/receive multiple times */
-        while (1)
+        /* Send current user info */
+        connectionStatus = SendUserInfo(clientSocket, CUSER, 1);
+        if (1 == connectionStatus)
         {
-            /* Send a message */
-            if (-1 == SendMsg(clientSocket))
-                break;
-            
-            /* Receive a message */
-            if (-1 == ReceiveMsg(clientSocket))
-                break;
+            /* Receive server user info */
+            connectionStatus = ReceiveUserInfo(clientSocket, connectionUser, 1);
+            if (1 == connectionStatus)
+            {
+                /* Allow to send/receive multiple times */
+                while (1)
+                {
+                    /* Send a message */
+                    if (-1 == SendAndDisplayMsg(clientSocket))
+                        break;
+                    
+                    /* Receive a message */
+                    if (-1 == ReceiveAndDisplayMsg(clientSocket))
+                        break;
+                }
+            }
         }
         
+        /* CLOSE: Close connection, free port used */
         close(clientSocket);
-    }
-    
-    return 0;
-}
-
-int SendConnectionUserInfo(int xSocket, USER* sender)
-{
-    char userInfo[20];
-    char* tempColor = (char*)malloc(sizeof(char[1]));
-    
-    strncpy(userInfo, CUSER->userName, 20);
-    sprintf(tempColor, "%d", (CUSER->userColor - 40));
-    
-    userInfo[17] = *tempColor;
-    
-    
-    /*send(clientSocket, userInfo, MAXSIZE-1, MAXSIZE-1);
-    
-    if (0 > (num = recv(clientSocket, msgBuffer, MAXSIZE, 0)))
-    {
-        perror("recv");
-        return -1;
-    }
-    else if (0 == num)
-    {
-        AddMessage(SYSTEMUSER, "Connection closed", 0);
         
-        return -1;
-    }*/
+        AddMessage(SYSTEMUSER, "Connection closed!", 0);
+    }
     
     return 0;
 }
 
-int SendMsg(int xSocket)
+/* Send user info to a socket and validate if it was received */
+int SendUserInfo(int xSocket, USER* sender, int validate)
+{
+    /* Send username */
+    strncpy(msgBuffer, sender->userName, USERNAMESIZE);
+    if (USERNAMESIZE != (send(xSocket, msgBuffer, USERNAMESIZE, 0)))
+    {
+        return -1;
+    }
+    
+    /* Send color */
+    sprintf(msgBuffer, "%d", sender->userColor);
+    if (2 != (send(xSocket, msgBuffer, 2, 0)))
+    {
+        return -2;
+    }
+    
+    /* Validate the transaction */
+    if (validate)
+    {
+        USER* validateUser = (USER*)malloc(sizeof(USER));
+        
+        /* Receive the user info obtained that the other side */
+        ReceiveUserInfo(xSocket, validateUser, 0);
+        
+        if (!strncmp(sender->userName, validateUser->userName, USERNAMESIZE))
+            return 0;
+        else if (sender->userColor != validateUser->userColor)
+            return 0;
+    }
+    
+    return 1;
+}
+
+/* Receive user info to a socket and validate if it was received correctly */
+int ReceiveUserInfo(int xSocket, USER* sender, int validate)
+{
+    char senderUsername[USERNAMESIZE];
+    char senderColor[2];
+    
+    /* Receive username */
+    if (-1 == recv(xSocket, senderUsername, USERNAMESIZE, 0))
+    {
+        return -1;
+    }
+    
+    /* Receive color */
+    if (-1 == recv(xSocket, senderColor, 2, 0))
+    {
+        return -2;
+    }
+    
+    /* Assemble the User */
+    ChangeUser(sender, senderUsername, 1);
+    ChangeUser(sender, senderColor, 2);
+    
+    /* Validate the user info */
+    if (validate)
+        return SendUserInfo(xSocket, sender, 0);
+    
+    return 1;
+}
+
+/* Send a message to a socket and display it */
+int SendAndDisplayMsg(int xSocket)
 {
     /* Input and save a message */
     strncpy(msgBuffer, ProcessMessage(MAXSIZE, 1), MAXSIZE);
@@ -282,7 +312,8 @@ int SendMsg(int xSocket)
     return 0;
 }
 
-int ReceiveMsg(int xSocket)
+/* Receive a message to a socket and display it */
+int ReceiveAndDisplayMsg(int xSocket)
 {
     long int msgSize = -1;
     
