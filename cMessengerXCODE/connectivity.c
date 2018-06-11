@@ -6,15 +6,24 @@
 #include <string.h> /* for strcopy(), strlen(), memset() */
 #include <arpa/inet.h> /* for struct sockaddr_in, SOCK_STREAM */
 
+/*SYMBOLIC CONSTANTS*/
 #define PORT 8080
+/* Max number of characters received and sent */
 #define MAXSIZE 1024
 /* Max participants waiting for a connection */
 #define MAXPENDING 1
+/**/
 
-char msgBuffer[MAXSIZE];
-
+/*FUNCTION PROTOTYPES */
+/* Exchange messages in a synchronous manner; one by one, that is
+ specify a client and pass sendFirst=1 for a client */
 void ExchangeMsgs(int xSocket, int sendFirst);
+/**/
 
+/*GLOBAL VARIABLES*/
+/* String in which received messages are saved */
+char msgBuffer[MAXSIZE];
+/* Connection user information is received on client connection */
 USER* connectionUser = &(USER){ .userName = "\0", .userColor = 0 };
 /**/
 
@@ -36,6 +45,7 @@ int CreateServer()
     /* Client address */
     struct sockaddr_in clientAddress;
     unsigned int size = sizeof(clientAddress);
+    int yes = 1;
     /**/
     
     /* SOCKET: Create socket for incoming connections.
@@ -51,6 +61,7 @@ int CreateServer()
     serverAddress.sin_family = AF_INET; /* Internet address family */
     serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);  /* Any incoming interface */
     serverAddress.sin_port = htons(PORT); /* Local port */
+    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
     
     /* BIND: Assign address to socket.
      serverSocket - socket descriptor,
@@ -60,7 +71,7 @@ int CreateServer()
     {
         AddMessage(SYSTEMUSER, "Binding Failure!", 0);
         close(serverSocket);
-        return -1;
+        return -2;
     }
     
     /* LISTEN: Mark the socket to listen for incoming connections */
@@ -68,7 +79,7 @@ int CreateServer()
     {
         AddMessage(SYSTEMUSER, "Listening Failure!", 0);
         close(serverSocket);
-        return -1;
+        return -3;
     }
     
     PrintMessage(SYSTEMUSER, "Waiting for a connection...", 0);
@@ -195,7 +206,7 @@ int CreateClient()
     return 0;
 }
 
-/* COMMUNICATING */
+/* Exchange messages in a synchronous manner; one by one, that is */
 void ExchangeMsgs(int xSocket, int sendFirst)
 {
     int connectionStatus = 1;
