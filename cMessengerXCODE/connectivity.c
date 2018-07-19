@@ -2,9 +2,11 @@
 
 #include <stdio.h> /* for printf() */
 #include <stdlib.h> /* for malloc(), exit() */
+#include <sys/ioctl.h> /* for ioctl() */
 #include <unistd.h> /* for close() */
 #include <string.h> /* for strcopy(), strlen(), memset() */
 #include <arpa/inet.h> /* for struct sockaddr_in, SOCK_STREAM */
+#include <sys/time.h> /* for struct timeval */
 
 /*SYMBOLIC CONSTANTS*/
 #define PORT 8080
@@ -45,7 +47,15 @@ int CreateServer()
     /* Client address */
     struct sockaddr_in clientAddress;
     unsigned int size = sizeof(clientAddress);
-    int yes = 1;
+    
+    int i1, rc, desc_ready, yes = 1;
+    /* Timeout */
+    struct timeval timeout;
+    
+    /* File descriptors */
+    int max_sd;
+    
+    struct fd_set master_set, working_set;
     /**/
     
     /* SOCKET: Create socket for incoming connections.
@@ -55,67 +65,163 @@ int CreateServer()
     if (-1 == (serverSocket = socket(AF_INET, SOCK_STREAM, 0)))
     {
         AddMessage(SYSTEMUSER, "Socket failure!", 0);
+        return -1;
+    }
+    
+    /* Set a socket to non-blocking */
+    if (-1 == (rc = ioctl(serverSocket, FIONBIO, &yes)))
+    {
+        AddMessage(SYSTEMUSER, "Failed to set socket to non-blocking", 0);
+        return -2;
     }
     
     /* Construct local address structure */
     serverAddress.sin_family = AF_INET; /* Internet address family */
     serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);  /* Any incoming interface */
     serverAddress.sin_port = htons(PORT); /* Local port */
-    setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int));
+    
+    if (-1 == (rc = setsockopt(serverSocket, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int))))
+    {
+        AddMessage(SYSTEMUSER, "Sock opt failure", 0);
+        return -3;
+    }
     
     /* BIND: Assign address to socket.
      serverSocket - socket descriptor,
      serverAddress - the address and port,
      size - size of sockaddr_in structure */
-    if (-1 == (bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress))))
+    if (-1 == (rc = bind(serverSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress))))
     {
         AddMessage(SYSTEMUSER, "Binding Failure!", 0);
         close(serverSocket);
-        return -2;
+        return -4;
     }
     
     /* LISTEN: Mark the socket to listen for incoming connections */
-    if (-1 == listen(serverSocket, MAXPENDING))
+    if (-1 == (rc = listen(serverSocket, MAXPENDING)))
     {
         AddMessage(SYSTEMUSER, "Listening Failure!", 0);
         close(serverSocket);
-        return -3;
+        return -5;
     }
+    
+    /* Initialise fd_set */
+    FD_ZERO(&master_set);
+    max_sd = serverSocket;
+    FD_SET(serverSocket, &master_set);
+    
+    /* Initialise the timeval */
+    timeout.tv_sec = 180;
+    timeout.tv_usec = 0;
+    
     
     PrintMessage(SYSTEMUSER, "Waiting for a connection...", 0);
     
     /* Allow multiple consecutive connections to a listening socket */
     for(;;)
     {
-        /* ACCEPT: Dequeue the net connection on the socket (blocking).
-         clientSocket - socket used for data transfer,
-         serverSocket - being listened to socket,
-         &clientAddress - address of the active participant (filled in upon return),
-         size - size of sockaddr_in structure */
-        if (-1 == (clientSocket = accept(serverSocket, (struct sockaddr*)&clientAddress, &size)))
+        /* Copy the master fd_set over to the working fd_set */
+        memcpy(&working_set, &master_set, sizeof(master_set));
+        
+        /* Call select */
+        if (-1 == (rc = select(max_sd + 1, &working_set, NULL, NULL, &timeout)))
         {
-            AddMessage(SYSTEMUSER, "Accept error!", 0);
-            close(serverSocket);
-            return -1;
+            AddMessage(SYSTEMUSER, "Select failed", 0);
+            break;
         }
         
-        /* COMMUNICATING */
+        /* If timeout */
+        if (0 == rc)
         {
-            int connectionStatus = 0;
-            
-            /* Receive client user info */
-            connectionStatus = ReceiveUserInfo(clientSocket, connectionUser, 1);
-            if (1 == connectionStatus)
+            AddMessage(SYSTEMUSER, "Timeout", 0);
+            break;
+        }
+        
+        /* File descriptors are readable */
+        desc_ready = rc;
+        
+        for (i1 = 0; i1 <= max_sd && desc_ready > 0; i1++)
+        {
+            /* Check if this descriptor is ready */
+            if (FD_ISSET(i1, &working_set))
             {
-                /* Send current user info */
-                connectionStatus = SendUserInfo(clientSocket, CUSER, 1);
-                if (1 == connectionStatus)
+                desc_ready -= 1;
+                
+                if (i1 == serverSocket)
                 {
-                    ExchangeMsgs(clientSocket, 0);
+                    /* Accept another incoming connection */
+                    do
+                    {
+                        /* ACCEPT: Dequeue the net connection on the socket (blocking).
+                         clientSocket - socket used for data transfer,
+                         serverSocket - being listened to socket,
+                         &clientAddress - address of the active participant (filled in upon return),
+                         size - size of sockaddr_in structure */
+                        if (-1 == (clientSocket = accept(serverSocket, NULL, NULL)))
+                        {
+                            AddMessage(SYSTEMUSER, "Accept error!", 0);
+                            break;
+                        }
+                        
+                        /* Add new connection to the master read set */
+                        FD_SET(clientSocket, &master_set);
+                        if (clientSocket > max_sd)
+                            max_sd = clientSocket;
+                    }
+                    while (-1 != clientSocket);
+                }
+                else
+                {
+                    int closeConnection = 0;
+                    
+                    /* Receive all incoming data on this socket */
+                    do
+                    {
+                        if (-1 == (rc = recv(i1, msgBuffer, MAXSIZE, 0)))
+                        {
+                            AddMessage(SYSTEMUSER, "Receive failed", 0);
+                            closeConnection = 1;
+                            break;
+                        }
+                        
+                        /* Check if the connection was closed by the client */
+                        if (0 == rc)
+                        {
+                            AddMessage(SYSTEMUSER, "Connection closed", 0);
+                            closeConnection = 1;
+                            break;
+                        }
+                        
+                        /* Data was received */
+                        if (-1 == (rc = send(i1, msgBuffer, MAXSIZE, 0)))
+                        {
+                            AddMessage(SYSTEMUSER, "Failed to send", 0);
+                            closeConnection = 1;
+                            
+                            break;
+                        }
+                        
+                    }
+                    while (1);
+                    
+                    if (closeConnection)
+                    {
+                        close(i1);
+                        FD_CLR(i1, &master_set);
+                        if (i1 == max_sd)
+                        {
+                            while (0 == FD_ISSET(max_sd, &master_set))
+                                max_sd -= 1;
+                        }
+                    }
                 }
             }
         }
     }
+    
+    for (i1 = 0; i1 <= max_sd; i1++)
+        if (FD_ISSET(i1, &master_set))
+            close(i1);
     
     return 0;
 }
